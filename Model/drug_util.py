@@ -44,6 +44,8 @@ class GraphDataset(InMemoryDataset):
             edge_index = torch.LongTensor(data_mol[1]).to(device)
             GCNData = DATA.Data(x=features, edge_index=edge_index)
             data_list.append(GCNData)
+
+            print(data_list)
         self.data = data_list
 
     def __len__(self):

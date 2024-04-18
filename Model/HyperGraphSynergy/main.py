@@ -9,10 +9,12 @@ import glob
 import sys
 
 sys.path.append('..')
-from drug_util import GraphDataset, collate
-from utils import metrics_graph, set_seed_all
-from similarity import get_Cosin_Similarity, get_pvalue_matrix
-from process_data import getData
+
+print(os.getcwd())
+from Model.drug_util import GraphDataset, collate
+from Model.utils import metrics_graph, set_seed_all
+from Model.similarity import get_Cosin_Similarity, get_pvalue_matrix
+from Model.process_data import getData
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -104,11 +106,19 @@ if __name__ == '__main__':
     alpha = 0.4
     for cv_mode in cv_mode_ls:
         path = 'result_cls/' + dataset_name + '_' + str(cv_mode) + '_'
+
+        if not os.path.exists(path):
+            os.makedirs(path)
         file = open(path + 'result.txt', 'w')
+
+
+
         set_seed_all(seed)
         drug_feature, cline_feature, synergy_data, drug_sim_mat, cline_sim_mat = load_data(dataset_name)
         drug_set = Data.DataLoader(dataset=GraphDataset(graphs_dict=drug_feature),
                                    collate_fn=collate, batch_size=len(drug_feature), shuffle=False)
+
+        print(drug_set)
         cline_set = Data.DataLoader(dataset=Data.TensorDataset(cline_feature),
                                     batch_size=len(cline_feature), shuffle=False)
         # -----split synergy into 5CV,test set
