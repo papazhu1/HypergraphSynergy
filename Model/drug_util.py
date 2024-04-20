@@ -40,7 +40,7 @@ class GraphDataset(InMemoryDataset):
         for data_mol in graphs_dict:
             # features, edge_index = data_mol[0],data_mol[1]
             # GCNData = DATA.Data(x=torch.Tensor(features), edge_index=torch.LongTensor(edge_index))
-            features = torch.Tensor(data_mol[0]).to(device);
+            features = torch.Tensor(data_mol[0]).to(device)
             edge_index = torch.LongTensor(data_mol[1]).to(device)
             GCNData = DATA.Data(x=features, edge_index=edge_index)
             data_list.append(GCNData)
@@ -62,6 +62,8 @@ def collate(data_list):
 
 # -----molecular_graph_feature
 def calculate_graph_feat(feat_mat, adj_list):
+
+    # feat_mat是一个药物中每个原子的特征，adj_list是每个原子的连接关系
     assert feat_mat.shape[0] == len(adj_list)
     adj_mat = np.zeros((len(adj_list), len(adj_list)), dtype='float32')
     for i in range(len(adj_list)):
@@ -75,6 +77,7 @@ def calculate_graph_feat(feat_mat, adj_list):
 
 
 def drug_feature_extract(drug_data):
+    # 直接将字典转换成dataFrame的时候，key会变成列名，所以要转置
     drug_data = pd.DataFrame(drug_data).T
     drug_feat = [[] for _ in range(len(drug_data))]
     for i in range(len(drug_feat)):

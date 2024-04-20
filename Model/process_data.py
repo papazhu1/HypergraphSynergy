@@ -31,6 +31,7 @@ def getData(dataset):
         # drug_data 保存了
         # 1. 每个原子的化学性质或结构信息、
         # 2. 分子中每个原子的连接关系，即原子之间的化学键信息
+        # drug_data是一个字典，key是pubchemid，value是一个列表，列表的第一个元素是每个原子的化学性质或结构信息，第二个元素是原子之间的连接关系，临接表的每一行代表有多少个原子与该原子相连
         drug_data[str(tup[0])] = [mol_f[0].get_atom_features(), mol_f[0].get_adjacency_list()]
 
         # drug_smiles_fea 保存了每个药物的MACCS特征，就是药物的分子指纹信息
@@ -47,15 +48,22 @@ def getData(dataset):
 
     # d_map 保存了药物的pubchemid和一个从0开始的索引的映射
     d_map = dict(zip(drug_data.keys(), range(drug_num)))
+    # 每个药物的drug_fea包括了
+    # 1. 每个原子的化学性质或结构信息、
+    # 2. 分子中每个原子的连接关系，即原子之间的化学键信息
     drug_fea = drug_feature_extract(drug_data)
     gene_data = pd.read_csv(cline_feature_file, sep=',', header=0, index_col=[0])
     cline_num = len(gene_data.index)
+
+    # 将细胞系的排序从drug_num之后接着开始
     c_map = dict(zip(gene_data.index, range(drug_num, drug_num + cline_num)))
     cline_fea = np.array(gene_data, dtype='float32')
     synergy_load = pd.read_csv(drug_synergy_file, sep=',', header=0)
     synergy = [[d_map[str(row[0])], d_map[str(row[1])], c_map[row[2]], float(row[3])] for index, row in
                synergy_load.iterrows() if (str(row[0]) in drug_data.keys() and str(row[1]) in drug_data.keys() and
                                            str(row[2]) in gene_data.index)]
+    path = "../../Data/ALMANAC-COSMIC/"
+    pd.DataFrame(synergy).to_csv(path + 'synergy.csv', index=False)
 
     print("drug_smiles_fea")
     print(len(drug_smiles_fea))

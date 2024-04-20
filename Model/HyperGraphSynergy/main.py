@@ -20,12 +20,20 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 
 def load_data(dataset):
+
+    # synergy是一个list，每个元素是一个list，
+    # 包含了两个药物的编号，一个细胞系的编号，以及是否有协同作用的01类别标签
+
+    # 87个药，55个细胞系
     cline_fea, drug_fea, drug_smiles_fea, gene_data, synergy = getData(dataset)
     cline_fea = torch.from_numpy(cline_fea).to(device)
     threshold = 30
+    # 将synergy中的协同性值大于等于30的标记为1，小于30的标记为0
     for row in synergy:
         row[3] = 1 if row[3] >= threshold else 0
 
+    # drug_sim_matrix是一个矩阵，每个元素是两个药物的相似度
+    # cline_sim_matrix是一个矩阵，每个元素是两个细胞系的相似度
     drug_sim_matrix, cline_sim_matrix = get_sim_mat(drug_smiles_fea, np.array(gene_data, dtype='float32'))
 
     return drug_fea, cline_fea, synergy, drug_sim_matrix, cline_sim_matrix
@@ -37,6 +45,7 @@ def data_split(synergy, rd_seed=0):
     synergy_neg = pd.DataFrame([i for i in synergy if i[3] == 0])
     # -----split synergy into 5CV,test set
     train_size = 0.9
+    # 将synergy_pos和synergy_neg先打乱再按比例分成训练集和测试集
     synergy_cv_pos, synergy_test_pos = np.split(np.array(synergy_pos.sample(frac=1, random_state=rd_seed)),
                                                 [int(train_size * len(synergy_pos))])
     synergy_cv_neg, synergy_test_neg = np.split(np.array(synergy_neg.sample(frac=1, random_state=rd_seed)),
@@ -53,6 +62,7 @@ def data_split(synergy, rd_seed=0):
     return synergy_cv_data, test_ind, test_label
 
 
+# 获取药物之间的和细胞系之间的相似度矩阵
 def get_sim_mat(drug_fea, cline_fea):
     drug_sim_matrix = np.array(get_Cosin_Similarity(drug_fea))
     cline_sim_matrix = np.array(get_pvalue_matrix(cline_fea))
@@ -114,7 +124,11 @@ if __name__ == '__main__':
 
 
         set_seed_all(seed)
+
+
         drug_feature, cline_feature, synergy_data, drug_sim_mat, cline_sim_mat = load_data(dataset_name)
+
+        # 一个药物是一个图结构的数据
         drug_set = Data.DataLoader(dataset=GraphDataset(graphs_dict=drug_feature),
                                    collate_fn=collate, batch_size=len(drug_feature), shuffle=False)
 
@@ -123,6 +137,10 @@ if __name__ == '__main__':
                                     batch_size=len(cline_feature), shuffle=False)
         # -----split synergy into 5CV,test set
         synergy_cv, index_test, label_test = data_split(synergy_data)
+        # 采样方式有三种
+        # 一种是在所有样本上随机采样
+        # 一种是根据细胞系作为单位进行采样
+        # 一种是根据药物对作为单位进行采样
         if cv_mode == 1:
             cv_data = synergy_cv
         elif cv_mode == 2:
@@ -156,10 +174,17 @@ if __name__ == '__main__':
             # -----construct hyper_synergy_graph_set
             edge_data = synergy_train[synergy_train[:, 3] == 1, 0:3]
             synergy_edge = edge_data.reshape(1, -1)
+
+            # [[0], [1], [2] ...]
             index_num = np.expand_dims(np.arange(len(edge_data)), axis=-1)
+
+            # 0, 0, 0
+            # 1, 1, 1
             synergy_num = np.concatenate((index_num, index_num, index_num), axis=1)
             synergy_num = np.array(synergy_num).reshape(1, -1)
             synergy_graph = np.concatenate((synergy_edge, synergy_num), axis=0)
+
+            # [[37, 6, 113],     [0, 0, 0]]
             synergy_graph = torch.from_numpy(synergy_graph).type(torch.LongTensor).to(device)
 
             # ---model_build
